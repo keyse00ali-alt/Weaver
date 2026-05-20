@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weaver - QR Scanner</title>
+  <style>
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 0;
+      color: #0f172a;
+      background:
+        radial-gradient(1200px 600px at 20% 0%, rgba(56, 189, 248, 0.25), rgba(56, 189, 248, 0) 60%),
+        radial-gradient(900px 500px at 80% 10%, rgba(14, 165, 233, 0.18), rgba(14, 165, 233, 0) 55%),
+        linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 35%, #f8fafc 100%);
+      min-height: 100vh;
+    }
+
+    .container {
+      width: min(980px, calc(100% - 32px));
+      margin: 24px auto 40px;
+      display: grid;
+      gap: 16px;
+    }
+
+    header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 6px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: rgba(15, 23, 42, 0.7);
+      font-size: 0.95rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    @media (min-width: 860px) {
+      .grid {
+        grid-template-columns: 1.15fr 0.85fr;
+        align-items: start;
+      }
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(2, 132, 199, 0.15);
+      border-radius: 16px;
+      box-shadow:
+        0 10px 30px rgba(2, 132, 199, 0.12),
+        0 1px 0 rgba(255, 255, 255, 0.8) inset;
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(2, 132, 199, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 1.02rem;
+      font-weight: 650;
+    }
+
+    .card-body {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    button, .file-label {
+      appearance: none;
+      border: 1px solid rgba(2, 132, 199, 0.25);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(224, 242, 254, 0.9));
+      color: #075985;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+      box-shadow: 0 6px 16px rgba(2, 132, 199, 0.12);
+    }
+
+    button:hover, .file-label:hover {
+      transform: translateY(-1px);
+      border-color: rgba(2, 132, 199, 0.45);
+      box-shadow: 0 10px 24px rgba(2, 132, 199, 0.16);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .file-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .preview {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(2, 132, 199, 0.18);
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.5);
+      aspect-ratio: 16 / 10;
+      display: grid;
+      place-items: center;
+    }
+
+    #camera {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    #upload-preview {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: none;
+      background: rgba(255, 255, 255, 0.65);
+    }
+
+    .result {
+      border-radius: 14px;
+      border: 1px solid rgba(2, 132, 199, 0.16);
+      background: rgba(240, 249, 255, 0.65);
+      padding: 12px 12px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .result-label {
+      font-weight: 700;
+      color: rgba(2, 132, 199, 0.9);
+      white-space: nowrap;
+    }
+
+    #qr-result, #location-info {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.92rem;
+      word-break: break-word;
+    }
+
+    .hint {
+      color: rgba(15, 23, 42, 0.7);
+      font-size: 0.92rem;
+      line-height: 1.35;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Weaver QR Scanner</h1>
+        <p class="subtitle">Scan via camera or upload an image. Optional: share location.</p>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">QR Scanner</h2>
+          <div class="controls">
+            <button id="start-camera" type="button">Start camera</button>
+            <button id="stop-camera" type="button" disabled>Stop camera</button>
+
+            <label class="file-label" for="qr-upload">Upload image</label>
+            <input id="qr-upload" class="file-input" type="file" accept="image/*" />
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="preview" aria-label="Camera preview">
+            <video id="camera" autoplay playsinline muted></video>
+            <img id="upload-preview" alt="Uploaded image preview" />
+          </div>
+
+          <div class="result">
+            <div class="result-label">QR</div>
+            <div id="qr-result">Idle</div>
+          </div>
+
+          <p class="hint">
+            Tips: If camera scan is slow, hold the QR steady and fill most of the frame.
+            For uploads, use a sharp image with good contrast.
+          </p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">Location</h2>
+          <div class="controls">
+            <button id="share-location" type="button">Share my location</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="result">
+            <div class="result-label">GPS</div>
+            <div id="location-info">Not shared</div>
+          </div>
+          <p class="hint">
+            Location is only shown locally in your browser. If you plan to send it to an API,
+            wire that up explicitly.
+          </p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ZXing.js library for QR code scanning -->
+  <script src="https://unpkg.com/@zxing/browser@0.2.0"></script>
+  <script>
+    const codeReader = new ZXingjs.BrowserBarcodeReader();
+    const qrResultEl = document.getElementById('qr-result');
+    const video = document.getElementById('camera');
+    const uploadInput = document.getElementById('qr-upload');
+    const uploadPreview = document.getElementById('upload-preview');
+    const startBtn = document.getElementById('start-camera');
+    const stopBtn = document.getElementById('stop-camera');
+
+    let stream = null;
+    let scanning = false;
+    const canvas = document.createElement('canvas');
+
+    function setQrText(text) {
+      qrResultEl.textContent = text;
+    }
+
+    function setUploadPreviewVisible(visible) {
+      uploadPreview.style.display = visible ? 'block' : 'none';
+      video.style.display = visible ? 'none' : 'block';
+    }
+
+    async function startCameraScan() {
+      if (scanning) return;
+      setUploadPreviewVisible(false);
+      setQrText('Starting camera…');
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = stream;
+        scanning = true;
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+
+        const scan = async () => {
+          if (!scanning) return;
+
+          const ctx = canvas.getContext('2d');
+          if (video.readyState >= video.HAVE_ENOUGH_DATA) {
+            const w = video.videoWidth || 640;
+            const h = video.videoHeight || 480;
+            if (canvas.width !== w) canvas.width = w;
+            if (canvas.height !== h) canvas.height = h;
+
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            try {
+              const codes = await codeReader.decodeFromImageData(imageData);
+              if (codes.length > 0) {
+                setQrText(codes[0].getText());
+              } else {
+                setQrText('Scanning…');
+              }
+            } catch {
+              setQrText('Scanning…');
+            }
+          }
+
+          requestAnimationFrame(scan);
+        };
+
+        scan();
+      } catch (err) {
+        setQrText(`Camera error: ${err && err.message ? err.message : String(err)}`);
+        scanning = false;
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      }
+    }
+
+    function stopCameraScan() {
+      scanning = false;
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+
+      try {
+        video.srcObject = null;
+      } catch {}
+    }
+
+    async function decodeUploadedImage(file) {
+      if (!file) return;
+      stopCameraScan();
+      setUploadPreviewVisible(true);
+      setQrText('Decoding image…');
+
+      const objectUrl = URL.createObjectURL(file);
+      uploadPreview.src = objectUrl;
+
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          const w = img.naturalWidth || img.width;
+          const h = img.naturalHeight || img.height;
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const imageData = ctx.getImageData(0, 0, w, h);
+          const codes = await codeReader.decodeFromImageData(imageData);
+          if (codes.length > 0) {
+            setQrText(codes[0].getText());
+          } else {
+            setQrText('No QR found in this image.');
+          }
+        } catch (err) {
+          setQrText(`Decode failed: ${err && err.message ? err.message : String(err)}`);
+        } finally {
+          URL.revokeObjectURL(objectUrl);
+        }
+      };
+      img.onerror = () => {
+        setQrText('Failed to load image.');
+        URL.revokeObjectURL(objectUrl);
+      };
+      img.src = objectUrl;
+    }
+
+    startBtn.addEventListener('click', startCameraScan);
+    stopBtn.addEventListener('click', stopCameraScan);
+
+    uploadInput.addEventListener('change', async () => {
+      const file = uploadInput.files && uploadInput.files[0];
+      await decodeUploadedImage(file);
+      uploadInput.value = '';
+    });
+
+    // Stop camera when page is hidden
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopCameraScan();
+    });
+
+    // Share location
+    document.getElementById('share-location').addEventListener('click', async () => {
+      if (!navigator.geolocation) {
+        document.getElementById('location-info').textContent = 'Geolocation is not supported by this browser.';
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          const lat = position.coords.latitude.toFixed(6);
+          const lng = position.coords.longitude.toFixed(6);
+          document.getElementById('location-info').textContent = `Location shared: ${lat}, ${lng}`;
+        },
+        error => {
+          document.getElementById('location-info').textContent = `Unable to retrieve location: ${error.message}`;
+        },
+        { timeout: 10000, maximumAge: 5000 }
+      );
+    });
+  </script>
+</body>
+</html>

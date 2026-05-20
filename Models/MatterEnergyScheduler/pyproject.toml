@@ -1,0 +1,17 @@
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+exclude = [
+  "examples.py",
+  "test_imports.py",
+  "src/EnergySchedulerApi/Infrastructure/open_meteo_solar_forecast_backup.py",
+]
+
+[tool.ruff.lint]
+select = ["E", "F"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"main.py" = ["I001"]
+"**/__init__.py" = ["F401", "I001"]
+
