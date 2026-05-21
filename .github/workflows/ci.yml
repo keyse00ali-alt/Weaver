@@ -6,7 +6,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     defaults:
       run:
         working-directory: Models/MatterEnergyScheduler
@@ -21,8 +21,8 @@ jobs:
           pip install -r requirements.txt -r requirements-dev.txt
       - name: Ruff
         run: |
-          ruff check main.py src tests
+          python -m ruff check main.py src tests
       - name: Pytest
         run: |
-          pytest -q
+          python -m pytest -q
 
