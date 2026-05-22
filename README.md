@@ -49,7 +49,6 @@ Stop Weaver.vbs                    Double-click local stop helper
 - Windows 10/11
 - Node.js 20+
 - Python 3.12 or 3.13, installed from python.org with `Add python.exe to PATH` enabled
-  - Python 3.14 is not supported yet because the Matter Server CHIP dependency does not publish compatible builds for it.
 - A Matter appliance that can be put into pairing mode
 - The Windows computer running Weaver and the Matter appliance on the same home network
 
@@ -91,7 +90,7 @@ Start Weaver:
 .\start-weaver.ps1
 ```
 
-The start script opens separate windows for the local Matter Server, Weaver backend, and Weaver frontend. Leave those windows open while using Weaver.
+The start script opens separate windows for the Weaver backend and Weaver frontend. Leave those windows open while using Weaver.
 
 Weaver should open automatically. If it does not, open this address in your browser:
 
@@ -136,11 +135,13 @@ To also remove local Weaver app data, including Matter Server state:
 
 Matter commissioning and control are local-network operations. The machine running Weaver should be on the same home network as the Matter appliance.
 
-Weaver uses the same open-source Matter Server used by Home Assistant:
+Weaver talks to a Matter Server over WebSocket. The backend includes the same open-source Matter Server client package used by Home Assistant:
 
 ```text
 python-matter-server
 ```
+
+Native Windows startup of the Python Matter Server is not currently available because the upstream CHIP core package does not publish Windows builds. For real Matter appliance commissioning and control, point Weaver at a Matter Server running on a supported host by setting `MATTER_SERVER_WS_URL` before starting Weaver.
 
 The local architecture is:
 
@@ -153,13 +154,13 @@ Weaver UI
 
 The Matter Server handles the low-level Matter protocol work: discovery, secure commissioning, fabric credentials, node storage, secure sessions, and Matter cluster commands. Weaver handles the user experience, scheduling, and optimization decisions.
 
-By default, Weaver connects to the Matter Server at:
+If `MATTER_SERVER_WS_URL` is not set, Weaver tries this local address:
 
 ```text
 ws://127.0.0.1:5580/ws
 ```
 
-The Matter Server stores its local state under:
+If you run a supported Matter Server separately, it manages its own Matter state. The ignored Weaver data folder is:
 
 ```text
 .weaver/matter-server
@@ -174,7 +175,7 @@ This local state is not committed to Git.
 3. Open Weaver.
 4. Click Connect Device.
 5. Enter the device's Matter setup code.
-6. Weaver commissions the appliance through the local Matter Server.
+6. Weaver commissions the appliance through the configured Matter Server.
 
 ## Development Checks
 

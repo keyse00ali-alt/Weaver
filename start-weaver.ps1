@@ -24,9 +24,16 @@ if (-not (Test-VenvPython $python)) {
   Write-Error "Backend Python environment is missing, broken, or using an unsupported Python version. Run .\install.ps1 first. Weaver currently requires Python 3.12 or 3.13 for Matter Server support."
 }
 
-& (Join-Path $root "start-matter-server.ps1")
+if ($env:WEAVER_START_LOCAL_MATTER_SERVER -eq "1") {
+  & (Join-Path $root "start-matter-server.ps1")
+} else {
+  Write-Host "Skipping local Matter Server startup. Native Windows Matter Server support is not available with the current CHIP dependency."
+  Write-Host "Set MATTER_SERVER_WS_URL if you have a Matter Server running on a supported host."
+}
 
-$env:MATTER_SERVER_WS_URL = "ws://127.0.0.1:5580/ws"
+if (-not $env:MATTER_SERVER_WS_URL) {
+  $env:MATTER_SERVER_WS_URL = "ws://127.0.0.1:5580/ws"
+}
 $env:FRONTEND_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
 $env:WEAVER_LIVE_PRICES = "0"
 

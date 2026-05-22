@@ -5,6 +5,18 @@ $backend = Join-Path $root "Models\MatterEnergyScheduler"
 $frontend = Join-Path $root "frontend"
 $venvPython = Join-Path $backend ".venv\Scripts\python.exe"
 
+function Invoke-Checked {
+  param(
+    [string]$Command,
+    [string[]]$Arguments = @()
+  )
+
+  & $Command @Arguments
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "Command failed: $Command $($Arguments -join ' ')"
+  }
+}
+
 function Test-PythonInvocation {
   param(
     [string]$Command,
@@ -84,8 +96,8 @@ if (-not (Test-VenvPython $venvPython)) {
   Write-Host "Backend Python environment already exists. Reusing it."
 }
 
-& $venvPython -m pip install --upgrade pip
-& $venvPython -m pip install -r requirements.txt -r requirements-dev.txt
+Invoke-Checked $venvPython @("-m", "pip", "install", "--upgrade", "pip")
+Invoke-Checked $venvPython @("-m", "pip", "install", "-r", "requirements.txt", "-r", "requirements-dev.txt")
 
 Write-Host "Installing Weaver frontend dependencies..."
 Set-Location $frontend
@@ -94,7 +106,7 @@ if (Test-Path "node_modules") {
 } else {
   Write-Host "Installing frontend dependencies for the first time..."
 }
-npm.cmd install
+Invoke-Checked "npm.cmd" @("install")
 
-Write-Host "Matter Server is installed with the backend Python dependencies."
+Write-Host "Weaver backend dependencies are installed."
 Write-Host "Weaver install complete."

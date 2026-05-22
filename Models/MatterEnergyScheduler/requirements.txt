@@ -8,5 +8,4 @@ apscheduler
 sqlalchemy
 databases[sqlite]
 aiohttp
-python-matter-server[server]
-cryptography
+python-matter-server==8.1.2

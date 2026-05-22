@@ -22,13 +22,12 @@ try {
 }
 
 if (-not (Test-Path $matterServer)) {
-  Write-Error "Matter Server was not found. Run .\install.ps1 first."
+  Write-Error "Local Matter Server is not installed. Native Windows Matter Server support is not available because the upstream CHIP core package does not publish Windows builds. Use an external Matter Server and set MATTER_SERVER_WS_URL."
 }
 
-& $python -c "import cryptography" 2>$null
+& $python -c "import chip.exceptions" 2>$null
 if ($LASTEXITCODE -ne 0) {
-  Write-Host "Matter Server dependency missing: cryptography. Installing it now..."
-  & $python -m pip install cryptography
+  Write-Error "Local Matter Server cannot start because chip.exceptions is unavailable. Native Windows Matter Server support is not available because the upstream CHIP core package does not publish Windows builds. Use an external Matter Server and set MATTER_SERVER_WS_URL."
 }
 
 $existing = Get-NetTCPConnection -LocalPort 5580 -ErrorAction SilentlyContinue |
