@@ -73,8 +73,8 @@ export function Scanner({ onScan, onClose }: ScannerProps) {
     >
       <div className="flex justify-between items-center mb-8">
         <div>
-          <p className="text-xs text-blue-500">Pairing</p>
-          <h2 className="text-2xl font-bold text-blue-800">Add appliance</h2>
+          <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-primary">Pairing</p>
+          <h2 className="text-3xl font-bold tracking-tight text-slate-950">Add appliance</h2>
         </div>
         <button onClick={onClose} className="p-3 bg-white border border-slate-200 rounded-lg text-slate-500 shadow-sm">
           <X size={24} />
@@ -89,7 +89,7 @@ export function Scanner({ onScan, onClose }: ScannerProps) {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 1.1, opacity: 0 }}
-              className="w-full max-w-sm aspect-square organic-card scanner-card overflow-hidden relative border border-blue-200 shadow-lg"
+              className="w-full max-w-sm aspect-square organic-card scanner-card overflow-hidden relative shadow-lg"
             >
               <div id={readerId} className="w-full h-full"></div>
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
@@ -106,7 +106,7 @@ export function Scanner({ onScan, onClose }: ScannerProps) {
               <div className="w-24 h-24 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/30">
                 <LoaderCircle size={48} className="animate-spin" />
               </div>
-              <h3 className="text-xl font-bold text-blue-800">Pairing with Matter</h3>
+              <h3 className="text-xl font-bold text-slate-950">Pairing with Matter</h3>
               <p className="text-sm text-slate-500">This can take up to a minute. Keep the appliance in pairing mode...</p>
             </motion.div>
           ) : (
@@ -119,7 +119,7 @@ export function Scanner({ onScan, onClose }: ScannerProps) {
               <div className="w-24 h-24 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/30">
                 <CheckCircle2 size={48} />
               </div>
-              <h3 className="text-xl font-bold text-blue-800">Appliance connected</h3>
+              <h3 className="text-xl font-bold text-slate-950">Appliance connected</h3>
               <p className="text-sm text-slate-500">The device list is refreshing...</p>
             </motion.div>
           )}
@@ -133,7 +133,7 @@ export function Scanner({ onScan, onClose }: ScannerProps) {
           </div>
 
           <div className="relative">
-            <Keyboard className="absolute left-5 top-1/2 -translate-y-1/2 text-blue-600 w-5 h-5" />
+            <Keyboard className="absolute left-5 top-1/2 -translate-y-1/2 text-primary w-5 h-5" />
             <input 
               type="text" 
               placeholder="Enter setup code..."

@@ -120,24 +120,30 @@ button {
   font-weight: 800;
 }
 
-.scanner-card #reader {
+.scanner-card [id^="reader"] {
   color: #18323f;
 }
 
-.scanner-card #reader * {
+.scanner-card [id^="reader"] * {
   color: #18323f;
+  font-family: inherit;
 }
 
-.scanner-card #reader button,
-.scanner-card #reader select {
-  border-radius: 12px;
+.scanner-card [id^="reader"] button,
+.scanner-card [id^="reader"] select {
+  border-radius: 8px;
   border: 1px solid #b7d8d7;
   background: #187b8f;
   color: #ffffff;
   font-weight: 700;
 }
 
-.scanner-card #reader a {
+.scanner-card [id^="reader"] a {
   color: #187b8f;
   font-weight: 700;
+}
+
+.scanner-card [id^="reader"] img,
+.scanner-card [id^="reader"] svg {
+  filter: saturate(0.25);
 }
