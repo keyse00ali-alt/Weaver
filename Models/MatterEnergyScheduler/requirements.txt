@@ -8,5 +8,5 @@ apscheduler
 sqlalchemy
 databases[sqlite]
 aiohttp
-python-matter-server
+python-matter-server[server]
 cryptography

@@ -13,7 +13,7 @@ function Test-VenvPython {
   }
 
   try {
-    & $PythonPath -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)" 2>$null | Out-Null
+    & $PythonPath -c "import sys; raise SystemExit(0 if (3, 12) <= sys.version_info[:2] < (3, 14) else 1)" 2>$null | Out-Null
     return $LASTEXITCODE -eq 0
   } catch {
     return $false
@@ -21,7 +21,7 @@ function Test-VenvPython {
 }
 
 if (-not (Test-VenvPython $python)) {
-  Write-Error "Backend Python environment is missing or broken. Run .\install.ps1 first. If install says Python is missing, install Python from python.org and enable 'Add python.exe to PATH'."
+  Write-Error "Backend Python environment is missing, broken, or using an unsupported Python version. Run .\install.ps1 first. Weaver currently requires Python 3.12 or 3.13 for Matter Server support."
 }
 
 & (Join-Path $root "start-matter-server.ps1")

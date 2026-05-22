@@ -12,7 +12,7 @@ function Test-PythonInvocation {
   )
 
   try {
-    & $Command @Arguments -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)" 2>$null | Out-Null
+    & $Command @Arguments -c "import sys; raise SystemExit(0 if (3, 12) <= sys.version_info[:2] < (3, 14) else 1)" 2>$null | Out-Null
     return $LASTEXITCODE -eq 0
   } catch {
     return $false
@@ -64,7 +64,7 @@ function Resolve-Python {
     }
   }
 
-  Write-Error "Python 3.11 or newer was not found. Install Python 3.13 from https://www.python.org/downloads/windows/, enable 'Add python.exe to PATH', reopen PowerShell, then run .\install.ps1 again."
+  Write-Error "Python 3.12 or 3.13 was not found. Weaver's Matter Server dependency does not support Python 3.14 yet. Install Python 3.13 from https://www.python.org/downloads/windows/, enable 'Add python.exe to PATH', reopen PowerShell, then run .\install.ps1 again."
 }
 
 Write-Host "Installing Weaver backend dependencies..."

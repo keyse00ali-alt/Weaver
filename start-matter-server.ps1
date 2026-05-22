@@ -13,12 +13,12 @@ if (-not (Test-Path $python)) {
 }
 
 try {
-  & $python -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)" 2>$null | Out-Null
+  & $python -c "import sys; raise SystemExit(0 if (3, 12) <= sys.version_info[:2] < (3, 14) else 1)" 2>$null | Out-Null
   if ($LASTEXITCODE -ne 0) {
-    Write-Error "Backend Python environment is broken. Run .\install.ps1 first. If install says Python is missing, install Python from python.org and enable 'Add python.exe to PATH'."
+    Write-Error "Backend Python environment is broken or using an unsupported Python version. Run .\install.ps1 first. Weaver currently requires Python 3.12 or 3.13 for Matter Server support."
   }
 } catch {
-  Write-Error "Backend Python environment is broken. Run .\install.ps1 first. If install says Python is missing, install Python from python.org and enable 'Add python.exe to PATH'."
+  Write-Error "Backend Python environment is broken or using an unsupported Python version. Run .\install.ps1 first. Weaver currently requires Python 3.12 or 3.13 for Matter Server support."
 }
 
 if (-not (Test-Path $matterServer)) {
