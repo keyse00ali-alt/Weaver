@@ -5,8 +5,23 @@ $backend = Join-Path $root "Models\MatterEnergyScheduler"
 $frontend = Join-Path $root "frontend"
 $python = Join-Path $backend ".venv\Scripts\python.exe"
 
-if (-not (Test-Path $python)) {
-  Write-Error "Backend virtual environment not found. Run .\install.ps1 first."
+function Test-VenvPython {
+  param([string]$PythonPath)
+
+  if (-not (Test-Path $PythonPath)) {
+    return $false
+  }
+
+  try {
+    & $PythonPath -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)" 2>$null | Out-Null
+    return $LASTEXITCODE -eq 0
+  } catch {
+    return $false
+  }
+}
+
+if (-not (Test-VenvPython $python)) {
+  Write-Error "Backend Python environment is missing or broken. Run .\install.ps1 first. If install says Python is missing, install Python from python.org and enable 'Add python.exe to PATH'."
 }
 
 & (Join-Path $root "start-matter-server.ps1")

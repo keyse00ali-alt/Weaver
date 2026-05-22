@@ -46,7 +46,7 @@ Stop Weaver.vbs                    Double-click local stop helper
 
 - Windows 10/11
 - Node.js 20+
-- Python 3.13 recommended
+- Python 3.13 recommended, installed from python.org with `Add python.exe to PATH` enabled
 - A Matter appliance that can be put into pairing mode
 - The Windows computer running Weaver and the Matter appliance on the same home network
 

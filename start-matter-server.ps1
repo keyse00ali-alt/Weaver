@@ -12,6 +12,15 @@ if (-not (Test-Path $python)) {
   Write-Error "Backend virtual environment was not found. Run .\install.ps1 first."
 }
 
+try {
+  & $python -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)" 2>$null | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "Backend Python environment is broken. Run .\install.ps1 first. If install says Python is missing, install Python from python.org and enable 'Add python.exe to PATH'."
+  }
+} catch {
+  Write-Error "Backend Python environment is broken. Run .\install.ps1 first. If install says Python is missing, install Python from python.org and enable 'Add python.exe to PATH'."
+}
+
 if (-not (Test-Path $matterServer)) {
   Write-Error "Matter Server was not found. Run .\install.ps1 first."
 }

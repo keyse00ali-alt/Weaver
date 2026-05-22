@@ -3,17 +3,70 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $backend = Join-Path $root "Models\MatterEnergyScheduler"
 $frontend = Join-Path $root "frontend"
+$venvPython = Join-Path $backend ".venv\Scripts\python.exe"
+
+function Test-PythonInvocation {
+  param(
+    [string]$Command,
+    [string[]]$Arguments = @()
+  )
+
+  try {
+    & $Command @Arguments -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)" 2>$null | Out-Null
+    return $LASTEXITCODE -eq 0
+  } catch {
+    return $false
+  }
+}
+
+function Test-VenvPython {
+  param([string]$PythonPath)
+
+  if (-not (Test-Path $PythonPath)) {
+    return $false
+  }
+
+  return Test-PythonInvocation -Command $PythonPath
+}
+
+function Resolve-Python {
+  $candidates = @(
+    @{ Command = "python"; Arguments = @() },
+    @{ Command = "py"; Arguments = @("-3") }
+  )
+
+  foreach ($candidate in $candidates) {
+    $command = Get-Command $candidate.Command -ErrorAction SilentlyContinue
+    if ($command -and (Test-PythonInvocation -Command $command.Source -Arguments $candidate.Arguments)) {
+      return @{
+        Command = $command.Source
+        Arguments = $candidate.Arguments
+      }
+    }
+  }
+
+  Write-Error "Python 3.11 or newer was not found. Install Python 3.13 from https://www.python.org/downloads/windows/, enable 'Add python.exe to PATH', reopen PowerShell, then run .\install.ps1 again."
+}
 
 Write-Host "Installing Weaver backend dependencies..."
 Set-Location $backend
-if (-not (Test-Path ".venv\Scripts\python.exe")) {
+
+if (-not (Test-VenvPython $venvPython)) {
+  if (Test-Path ".venv") {
+    Write-Host "Backend Python environment is missing or broken. Rebuilding it..."
+    Remove-Item -LiteralPath ".venv" -Recurse -Force
+  }
+
   Write-Host "Creating backend Python environment..."
-  python -m venv .venv
+  $python = Resolve-Python
+  $pythonArgs = $python.Arguments
+  & $python.Command @pythonArgs -m venv .venv
 } else {
   Write-Host "Backend Python environment already exists. Reusing it."
 }
-.\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-dev.txt
+
+& $venvPython -m pip install --upgrade pip
+& $venvPython -m pip install -r requirements.txt -r requirements-dev.txt
 
 Write-Host "Installing Weaver frontend dependencies..."
 Set-Location $frontend
