@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 import { Bell, MapPin, Network, Sun } from "lucide-react";
 import { weaverApi } from "@/lib/api";
@@ -24,12 +24,22 @@ type HouseholdResponse = {
   location_longitude?: number | null;
 };
 
+const subscribeToCityStorage = (onStoreChange: () => void) => {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener("weaver-city-change", onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener("weaver-city-change", onStoreChange);
+  };
+};
+
+const getStoredCity = () => window.localStorage.getItem(CITY_STORAGE_KEY);
+const getServerCity = () => null;
+
 export default function InfoPage() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [household, setHousehold] = useState<HouseholdResponse | null>(null);
-  const [selectedCity] = useState<string | null>(() => (
-    typeof window !== "undefined" ? window.localStorage.getItem(CITY_STORAGE_KEY) : null
-  ));
+  const selectedCity = useSyncExternalStore(subscribeToCityStorage, getStoredCity, getServerCity);
 
   useEffect(() => {
     let isMounted = true;

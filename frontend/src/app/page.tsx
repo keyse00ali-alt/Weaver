@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layers, Plus, Signal, RefreshCcw, MapPin, AlertCircle, Clock, Search, Zap, X, Sun, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -81,15 +81,25 @@ const SUPPORTED_COUNTRIES = [
   "IE", "GB", "FR", "DE", "ES", "IT", "BE", "NL", "PT", "DK", "NO", "SE", "FI", "AT", "CH", "PL", "CZ", "HU", "RO", "GR"
 ];
 
+const subscribeToCityStorage = (onStoreChange: () => void) => {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener("weaver-city-change", onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener("weaver-city-change", onStoreChange);
+  };
+};
+
+const getStoredCity = () => window.localStorage.getItem(CITY_STORAGE_KEY);
+const getServerCity = () => null;
+
 export default function Home() {
   const [appliances, setAppliances] = useState<Appliance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
   const [biddingZone, setBiddingZone] = useState<string | null>(null);
-  const [selectedCity, setSelectedCity] = useState<string | null>(() => (
-    typeof window !== "undefined" ? window.localStorage.getItem(CITY_STORAGE_KEY) : null
-  ));
+  const selectedCity = useSyncExternalStore(subscribeToCityStorage, getStoredCity, getServerCity);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [currentPrice, setCurrentPrice] = useState<CurrentPrice | null>(null);
   const [householdType, setHouseholdType] = useState<"grid_only" | "grid_and_pv">("grid_only");
@@ -224,13 +234,13 @@ export default function Home() {
         const cityLabel = city ? getCityLabel(city) : null;
         setLocation({ lat, lng });
         setBiddingZone(res.bidding_zone);
-        setSelectedCity(cityLabel);
         if (typeof window !== "undefined") {
           if (cityLabel) {
             window.localStorage.setItem(CITY_STORAGE_KEY, cityLabel);
           } else {
             window.localStorage.removeItem(CITY_STORAGE_KEY);
           }
+          window.dispatchEvent(new Event("weaver-city-change"));
         }
         setLocationError(null);
         setIsSearchingLocation(false); // Close immediately for snappiness
