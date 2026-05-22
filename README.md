@@ -64,16 +64,33 @@ Useful feedback includes:
 
 ## Quick Start on Windows
 
-Open PowerShell in the repo root:
+Open PowerShell, then go to the Weaver folder:
+
+```powershell
+cd C:\Users\YOUR_NAME\Desktop\Weaver
+```
+
+If PowerShell says scripts are disabled, allow scripts for this PowerShell window only:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+Install Weaver once:
 
 ```powershell
 .\install.ps1
+```
+
+Start Weaver:
+
+```powershell
 .\start-weaver.ps1
 ```
 
-`start-weaver.ps1` starts the local Matter Server, Weaver backend, and Weaver frontend.
+The start script opens separate windows for the local Matter Server, Weaver backend, and Weaver frontend. Leave those windows open while using Weaver.
 
-Then open:
+Weaver should open automatically. If it does not, open this address in your browser:
 
 ```text
 http://127.0.0.1:3000
@@ -81,7 +98,20 @@ http://127.0.0.1:3000
 
 Put the Matter appliance into pairing mode, click Connect Device in Weaver, and enter the device's Matter setup code or `MT:` payload.
 
-You can also start Weaver from File Explorer by opening the repo folder and double-clicking `Start Weaver.vbs`. To stop Weaver, double-click `Stop Weaver.vbs`.
+After the first install, normal startup is just:
+
+```powershell
+cd C:\Users\YOUR_NAME\Desktop\Weaver
+.\start-weaver.ps1
+```
+
+To stop Weaver, close the Weaver PowerShell windows or run:
+
+```powershell
+.\stop-weaver.ps1
+```
+
+You can also start Weaver from File Explorer by opening the repo folder and opening `Start Weaver.vbs`. To stop Weaver from File Explorer, open `Stop Weaver.vbs`.
 
 ## Uninstall
 
