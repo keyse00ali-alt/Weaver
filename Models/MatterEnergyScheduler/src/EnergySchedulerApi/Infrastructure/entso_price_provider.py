@@ -111,7 +111,8 @@ class EntsoePriceProvider:
             data = [
                 {
                     "start_time": p.start_time.isoformat(),
-                    "price_per_kwh": p.price_per_kwh
+                    "price_per_kwh": p.price_per_kwh,
+                    "is_real": p.is_real,
                 }
                 for p in prices
             ]
@@ -132,7 +133,8 @@ class EntsoePriceProvider:
                 prices = [
                     EnergyPrice(
                         start_time=self._to_naive(datetime.fromisoformat(p["start_time"])),
-                        price_per_kwh=p["price_per_kwh"]
+                        price_per_kwh=p["price_per_kwh"],
+                        is_real=p.get("is_real", True),
                     )
                     for p in data
                 ]
@@ -204,15 +206,21 @@ class EntsoePriceProvider:
         bidding_zone: str,
     ) -> List[EnergyPrice]:
         """Keep provided prices and fill missing hourly windows with fallback prices."""
-        by_start_time = {
-            self._to_naive(price.start_time).replace(second=0, microsecond=0): EnergyPrice(
+        by_start_time: dict[datetime, EnergyPrice] = {}
+        for price in prices:
+            start_time = self._to_naive(price.start_time).replace(second=0, microsecond=0)
+            if start_time.date() != target_date:
+                continue
+
+            existing_price = by_start_time.get(start_time)
+            if existing_price and existing_price.is_real and not price.is_real:
+                continue
+
+            by_start_time[start_time] = EnergyPrice(
                 start_time=self._to_naive(price.start_time).replace(second=0, microsecond=0),
                 price_per_kwh=price.price_per_kwh,
                 is_real=price.is_real,
             )
-            for price in prices
-            if self._to_naive(price.start_time).date() == target_date
-        }
 
         for fallback in self._generate_fallback_prices(target_date, bidding_zone):
             fallback_time = fallback.start_time.replace(second=0, microsecond=0)

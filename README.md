@@ -22,7 +22,7 @@ When you choose a city, Weaver uses that location to fetch local electricity pri
 
 The price data is wholesale electricity market pricing. It does not represent a fixed household tariff or a utility plan where you pay the same rate all day. Weaver's price scheduling is meant to reflect dynamic electricity plans, where the price changes by time period and the utility or supplier passes some version of that signal to the customer.
 
-When a schedule reaches into hours where live day-ahead prices are not published yet, Weaver keeps every real price it already has and fills only the missing price windows with fallback estimates. This lets scheduling still work across a deadline while giving priority to actual market prices whenever they are available.
+When a schedule reaches into hours where live day-ahead prices are not published yet, Weaver keeps every real price it already has and fills only the missing price windows with fallback estimates. This lets scheduling still work across a deadline while giving priority to actual market prices whenever they are available. Fallback estimates are not treated as permanent: when actual prices arrive later, they replace the synthetic prices for the same time windows.
 
 In grid-only mode, Weaver uses a cheapest-window algorithm. It sorts through the available price periods, estimates the cost of running the appliance in each possible window, skips windows that would miss the deadline or exceed the configured home load limit, and chooses the lowest-cost valid window.
 

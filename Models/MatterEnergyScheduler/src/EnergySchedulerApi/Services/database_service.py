@@ -282,6 +282,13 @@ class DatabaseService:
         with self.get_db() as db:
             from ..Infrastructure.db_models import DmEnergyPrice
             for p in prices:
+                existing_price = db.query(DmEnergyPrice).filter(
+                    DmEnergyPrice.bidding_zone == bidding_zone,
+                    DmEnergyPrice.start_time == p.start_time
+                ).first()
+                if existing_price and existing_price.is_real and not p.is_real:
+                    continue
+
                 db_price = DmEnergyPrice(
                     bidding_zone=bidding_zone,
                     start_time=p.start_time,
@@ -289,7 +296,7 @@ class DatabaseService:
                     is_real=p.is_real,
                     updated_at=datetime.now()
                 )
-                # Simple deduplication: delete existing price for same time/zone
+                # Replace synthetic prices as soon as real prices arrive.
                 db.query(DmEnergyPrice).filter(
                     DmEnergyPrice.bidding_zone == bidding_zone,
                     DmEnergyPrice.start_time == p.start_time

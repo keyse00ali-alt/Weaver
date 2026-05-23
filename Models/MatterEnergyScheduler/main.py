@@ -733,7 +733,7 @@ async def get_current_price(bidding_zone: str, lat: Optional[float] = None, lng:
         db_prices = db_service.get_latest_prices(bidding_zone, now.date())
         current_p = next((p for p in db_prices if p.start_time <= now < (p.start_time + timedelta(hours=1))), None)
         
-        if current_p:
+        if current_p and current_p.is_real:
             return current_p
             
         # If not in DB, try real API
@@ -743,6 +743,8 @@ async def get_current_price(bidding_zone: str, lat: Optional[float] = None, lng:
         temp_hh = HH(bidding_zone=bidding_zone)
         
         prices = await price_provider.get_day_ahead_prices(now.date(), household=temp_hh, lat=lat, lng=lng)
+        if any(p.is_real for p in prices):
+            db_service.save_energy_prices(bidding_zone, prices)
         current_p = next((p for p in prices if p.start_time <= now < (p.start_time + timedelta(hours=1))), None)
         return current_p or (prices[0] if prices else None)
     except Exception as e:

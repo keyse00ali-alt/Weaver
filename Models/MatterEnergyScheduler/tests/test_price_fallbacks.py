@@ -54,6 +54,47 @@ def test_missing_price_windows_use_fallback_without_replacing_real_prices():
     assert all(price.is_real is False for index, price in enumerate(prices) if index != 18)
 
 
+def test_real_price_wins_when_merging_same_window_with_synthetic_price():
+    provider = EntsoePriceProvider("unused")
+    target_date = date(2026, 5, 3)
+    synthetic_price = EnergyPrice(
+        start_time=datetime(2026, 5, 3, 18, 0),
+        price_per_kwh=0.50,
+        is_real=False,
+    )
+    real_price = EnergyPrice(
+        start_time=datetime(2026, 5, 3, 18, 0),
+        price_per_kwh=0.12,
+        is_real=True,
+    )
+
+    prices = provider._merge_missing_price_windows(
+        [real_price, synthetic_price],
+        target_date,
+        "10YFR-RTE------C",
+    )
+
+    assert prices[18].price_per_kwh == real_price.price_per_kwh
+    assert prices[18].is_real is True
+
+
+def test_price_cache_preserves_synthetic_marker(tmp_path):
+    provider = EntsoePriceProvider("unused")
+    provider.CACHE_DIR = tmp_path
+    target_date = date(2026, 5, 3)
+    synthetic_price = EnergyPrice(
+        start_time=datetime(2026, 5, 3, 18, 0),
+        price_per_kwh=0.50,
+        is_real=False,
+    )
+
+    provider._save_prices_to_cache(target_date, "10YFR-RTE------C", [synthetic_price])
+    prices = provider._load_prices_from_cache(target_date, "10YFR-RTE------C")
+
+    assert len(prices) == 1
+    assert prices[0].is_real is False
+
+
 def test_price_window_uses_fallback_only_for_missing_future_windows():
     provider = EntsoePriceProvider("unused")
     household = SimpleNamespace(bidding_zone="10YFR-RTE------C")
