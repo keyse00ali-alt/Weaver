@@ -1,13 +1,13 @@
 # Weaver
 
-Weaver is a local-first smart energy scheduler for Matter appliances.
+Weaver is a local-first smart energy scheduler for Matter appliances, designed to pair with a Matter Server running on Home Assistant or a Raspberry Pi.
 
-It runs inside the user's home network, commissions Matter devices through a local Matter controller, and schedules flexible appliances around grid prices and optional solar production.
+It runs inside the user's home network, connects to a Matter controller over WebSocket, and schedules flexible appliances around grid prices and optional solar production.
 
 ## What Weaver Does Now
 
-- Connects Matter appliances with a manual setup code or `MT:` QR payload.
-- Runs connected On/Off Matter appliances immediately.
+- Connects Matter appliances through a configured Matter Server.
+- Runs connected On/Off Matter appliances immediately when Matter Server access is available.
 - Schedules flexible appliance loads against a grid price signal.
 - Supports two home modes:
   - Grid only
@@ -35,9 +35,9 @@ The intended BESS algorithm would use available solar first, then battery energy
 ```text
 frontend/                         Next.js app
 Models/MatterEnergyScheduler/      FastAPI backend
-install.ps1                        Windows dependency install script
-start-matter-server.ps1            Starts the local Home Assistant Matter Server from Python
-start-weaver.ps1                   Windows local startup script
+install.ps1                        Windows dependency install script for Weaver
+start-matter-server.ps1            Advanced helper; native Windows Matter Server is not supported
+start-weaver.ps1                   Windows local startup script for Weaver UI/backend
 stop-weaver.ps1                    Windows local stop script
 uninstall.ps1                      Removes installed local dependencies
 Start Weaver.vbs                   Double-click local launcher
@@ -46,20 +46,21 @@ Stop Weaver.vbs                    Double-click local stop helper
 
 ## Requirements
 
-- Windows 10/11
+- Windows 10/11 for the Weaver UI/backend
 - Node.js 20+
 - Python 3.12 or 3.13, installed from python.org with `Add python.exe to PATH` enabled
+- Home Assistant or a Raspberry Pi running Matter Server for real appliance commissioning/control
 - A Matter appliance that can be put into pairing mode
-- The Windows computer running Weaver and the Matter appliance on the same home network
+- The Weaver machine, Matter Server host, and Matter appliance on the same home network
 
 ## Before You Try It
 
-Weaver is an early local app for testing Matter appliance scheduling. It is best suited for people who are comfortable running PowerShell commands and trying software that may need troubleshooting.
+Weaver is an early local app for testing Matter appliance scheduling. It is best suited for people who already run Home Assistant or a Raspberry Pi at home and are comfortable trying software that may need troubleshooting.
 
 Useful feedback includes:
 
 - Whether install and startup worked on your machine.
-- Whether Weaver could commission your Matter appliance.
+- Whether Weaver could connect through your Home Assistant or Raspberry Pi Matter Server.
 - What appliance type, brand, and model you tested.
 - Any error messages from the PowerShell windows or the app.
 - Places where the setup instructions were confusing.
@@ -100,6 +101,13 @@ http://127.0.0.1:3000
 
 Put the Matter appliance into pairing mode, click Connect Device in Weaver, and enter the device's Matter setup code or `MT:` payload.
 
+For real appliances, set Weaver's Matter Server URL before starting it:
+
+```powershell
+$env:MATTER_SERVER_WS_URL="ws://YOUR_HOME_ASSISTANT_OR_PI_IP:5580/ws"
+.\start-weaver.ps1
+```
+
 After the first install, normal startup is just:
 
 ```powershell
@@ -125,7 +133,7 @@ To remove Weaver's installed dependencies from this folder:
 
 This removes the Python virtual environment, frontend dependencies, and build caches. It keeps local Weaver app data by default.
 
-To also remove local Weaver app data, including Matter Server state:
+To also remove local Weaver app data:
 
 ```powershell
 .\uninstall.ps1 -RemoveData
@@ -135,13 +143,15 @@ To also remove local Weaver app data, including Matter Server state:
 
 Matter commissioning and control are local-network operations. The machine running Weaver should be on the same home network as the Matter appliance.
 
-Weaver talks to a Matter Server over WebSocket. The backend includes the same open-source Matter Server client package used by Home Assistant:
+Weaver talks to a Matter Server over WebSocket. The intended real-appliance setup is a Matter Server running on Home Assistant or a Raspberry Pi, with Weaver connecting to it from the same home network.
+
+The backend includes the same open-source Matter Server client package used by Home Assistant:
 
 ```text
 python-matter-server
 ```
 
-Native Windows startup of the Python Matter Server is not currently available because the upstream CHIP core package does not publish Windows builds. For real Matter appliance commissioning and control, point Weaver at a Matter Server running on a supported host by setting `MATTER_SERVER_WS_URL` before starting Weaver.
+Native Windows startup of the Python Matter Server is not currently available because the upstream CHIP core package does not publish Windows builds. Weaver therefore focuses on Home Assistant and Raspberry Pi Matter Server hosts for real appliance commissioning and control.
 
 The local architecture is:
 
@@ -154,13 +164,19 @@ Weaver UI
 
 The Matter Server handles the low-level Matter protocol work: discovery, secure commissioning, fabric credentials, node storage, secure sessions, and Matter cluster commands. Weaver handles the user experience, scheduling, and optimization decisions.
 
-If `MATTER_SERVER_WS_URL` is not set, Weaver tries this local address:
+Set `MATTER_SERVER_WS_URL` to your Home Assistant or Raspberry Pi Matter Server:
+
+```text
+ws://YOUR_HOME_ASSISTANT_OR_PI_IP:5580/ws
+```
+
+If `MATTER_SERVER_WS_URL` is not set, Weaver falls back to this local development address:
 
 ```text
 ws://127.0.0.1:5580/ws
 ```
 
-If you run a supported Matter Server separately, it manages its own Matter state. The ignored Weaver data folder is:
+Your Matter Server manages its own Matter state. The ignored Weaver data folder is:
 
 ```text
 .weaver/matter-server
@@ -170,12 +186,14 @@ This local state is not committed to Git.
 
 ## Pairing a Matter Appliance
 
-1. Make sure the computer running Weaver and the Matter appliance are on the same home network.
-2. Put the appliance into pairing mode.
-3. Open Weaver.
-4. Click Connect Device.
-5. Enter the device's Matter setup code.
-6. Weaver commissions the appliance through the configured Matter Server.
+1. Make sure Home Assistant or the Raspberry Pi Matter Server is running.
+2. Make sure the Weaver machine, Matter Server host, and Matter appliance are on the same home network.
+3. Set `MATTER_SERVER_WS_URL` to the Matter Server WebSocket URL before starting Weaver.
+4. Put the appliance into pairing mode.
+5. Open Weaver.
+6. Click Connect Device.
+7. Enter the device's Matter setup code.
+8. Weaver commissions the appliance through the configured Matter Server.
 
 ## Development Checks
 
@@ -212,11 +230,13 @@ The repo ignores local generated files such as:
 
 `start-weaver.ps1` is the normal way to run Weaver. These commands are only for starting individual services while developing or troubleshooting.
 
-Start only the Matter Server:
+Start only the Matter Server helper:
 
 ```powershell
 .\start-matter-server.ps1
 ```
+
+This helper is kept for advanced development on supported hosts. Native Windows Matter Server startup is not supported by the current upstream CHIP dependency.
 
 Start only the backend:
 
