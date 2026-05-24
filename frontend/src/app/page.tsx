@@ -74,6 +74,10 @@ type ApplianceStatus = {
 };
 
 const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : "Unknown error";
+const getApplianceSchedules = (jobs: ScheduleJob[], devices: Appliance[]) => {
+  const applianceIds = new Set(devices.map((device) => String(device.id)));
+  return jobs.filter((job) => applianceIds.has(String(job.appliance_id)));
+};
 const CITY_STORAGE_KEY = "weaver.selectedCity";
 const VIRTUAL_TEST_CODE = "WEAVER-TEST-LOAD";
 const DEFAULT_FINISH_BY = "23:00";
@@ -168,7 +172,7 @@ export default function Home() {
         weaverApi.getSchedules().catch(() => ({ jobs: [] })) as Promise<SchedulesResponse>
       ]);
       setAppliances(devices);
-      const liveSchedules = scheds.jobs || [];
+      const liveSchedules = getApplianceSchedules(scheds.jobs || [], devices);
       setSchedules(liveSchedules);
       const statuses = await Promise.all(
         devices.map((device) => weaverApi.getApplianceStatus(device.id).catch(() => null) as Promise<ApplianceStatus | null>)
@@ -470,8 +474,9 @@ export default function Home() {
       await (solarMode ? weaverApi.createSolarSchedule(schedulePayload) : weaverApi.createSchedule(schedulePayload));
       // Refresh schedules immediately
       const scheds = await weaverApi.getSchedules().catch(() => ({ jobs: [] })) as SchedulesResponse;
-      setSchedules(scheds.jobs || []);
-      const scheduled = scheds.jobs?.find(s => String(s.appliance_id) === String(id));
+      const liveSchedules = getApplianceSchedules(scheds.jobs || [], appliances);
+      setSchedules(liveSchedules);
+      const scheduled = liveSchedules.find(s => String(s.appliance_id) === String(id));
       const runTime = scheduled?.next_run_time ?? scheduled?.start_time;
       if (runTime) {
         toast.success(`Scheduled for ${new Date(runTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
@@ -556,6 +561,7 @@ export default function Home() {
   };
 
   const getSchedule = (appId: string) => schedules.find(s => String(s.appliance_id) === String(appId));
+  const isQueuedAppliance = (app: Appliance) => isApplianceRunning(app) || Boolean(getSchedule(app.id));
 
   const queueAppliances = [...appliances].sort((a, b) => {
     const aRunning = isApplianceRunning(a);
@@ -567,10 +573,10 @@ export default function Home() {
     if (aScheduled !== bScheduled) return aScheduled ? -1 : 1;
 
     return a.name.localeCompare(b.name);
-  }).filter((app) => isApplianceRunning(app) || Boolean(getSchedule(app.id)));
+  }).filter(isQueuedAppliance);
 
   const connectedAppliances = [...appliances].filter((app) => {
-    return !isApplianceRunning(app) && !Boolean(getSchedule(app.id));
+    return !isQueuedAppliance(app);
   }).sort((a, b) => {
     const aRunning = isApplianceRunning(a);
     const bRunning = isApplianceRunning(b);
@@ -859,7 +865,7 @@ export default function Home() {
             <div className="flex justify-between items-center gap-3">
               <div>
                 <h2 className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">All connected devices</h2>
-                <p className="text-xs text-slate-500 mt-1">Every paired appliance appears here, whether idle, scheduled, or running.</p>
+                <p className="text-xs text-slate-500 mt-1">Idle appliances appear here. Scheduled and running appliances move to the Run queue.</p>
               </div>
               <button
                 onClick={() => setIsScanning(true)}
@@ -870,7 +876,11 @@ export default function Home() {
               </button>
             </div>
 
-            {connectedAppliances.map((app) => {
+            {connectedAppliances.length === 0 ? (
+              <div className="organic-card p-4 text-sm font-semibold text-slate-500">
+                No idle appliances. Scheduled and running appliances are shown above.
+              </div>
+            ) : connectedAppliances.map((app) => {
               const isVirtual = isVirtualAppliance(app);
               const isRunning = isApplianceRunning(app);
               const scheduleTime = getScheduleTime(app.id);
