@@ -46,10 +46,11 @@ cd C:\Users\keyse\Desktop\Weaver\Models\MatterEnergyScheduler
 
 $env:MATTER_SERVER_WS_URL="ws://RASPBERRY_PI_IP:5580/ws"
 $env:FRONTEND_ORIGINS="http://localhost:3000,http://127.0.0.1:3000,http://YOUR_LAPTOP_IP:3000"
-$env:WEAVER_LIVE_PRICES="0"
 
 .\.venv\Scripts\python.exe -m uvicorn main:app --host 0.0.0.0 --port 8000
 ```
+
+Live ENTSO-E prices are attempted when `ENTSOE_API_KEY` is configured in `Models\MatterEnergyScheduler\.env` or in the shell environment. Set `WEAVER_LIVE_PRICES=0` only when you want to force fallback prices for offline testing.
 
 In another window:
 

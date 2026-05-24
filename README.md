@@ -22,6 +22,8 @@ When you choose a city, Weaver uses that location to fetch local electricity pri
 
 The price data is wholesale electricity market pricing. It does not represent a fixed household tariff or a utility plan where you pay the same rate all day. Weaver's price scheduling is meant to reflect dynamic electricity plans, where the price changes by time period and the utility or supplier passes some version of that signal to the customer.
 
+Live day-ahead prices require an ENTSO-E Transparency Platform API token. Put `ENTSOE_API_KEY=your_token_here` in `Models/MatterEnergyScheduler/.env`. If no token is configured, Weaver uses fallback estimates so the app can still schedule devices.
+
 When a schedule reaches into hours where live day-ahead prices are not published yet, Weaver keeps every real price it already has and fills only the missing price windows with fallback estimates. This lets scheduling still work across a deadline while giving priority to actual market prices whenever they are available. Fallback estimates are not treated as permanent: when actual prices arrive later, they replace the synthetic prices for the same time windows.
 
 In grid-only mode, Weaver uses a cheapest-window algorithm. It sorts through the available price periods, estimates the cost of running the appliance in each possible window, skips windows that would miss the deadline or exceed the configured home load limit, and chooses the lowest-cost valid window.
@@ -249,9 +251,14 @@ cd .\Models\MatterEnergyScheduler
 
 $env:MATTER_SERVER_WS_URL="ws://127.0.0.1:5580/ws"
 $env:FRONTEND_ORIGINS="http://localhost:3000,http://127.0.0.1:3000"
-$env:WEAVER_LIVE_PRICES="0"
 
 .\.venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000
+```
+
+To force fallback prices while troubleshooting, set:
+
+```powershell
+$env:WEAVER_LIVE_PRICES="0"
 ```
 
 Start only the frontend:

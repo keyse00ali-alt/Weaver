@@ -95,6 +95,32 @@ def test_price_cache_preserves_synthetic_marker(tmp_path):
     assert prices[0].is_real is False
 
 
+def test_live_prices_auto_enable_when_token_is_configured(monkeypatch):
+    monkeypatch.delenv("WEAVER_LIVE_PRICES", raising=False)
+
+    assert EntsoePriceProvider("real-token")._live_prices_enabled() is True
+    assert EntsoePriceProvider("YOUR_TOKEN_HERE")._live_prices_enabled() is False
+
+
+def test_live_prices_can_be_forced_off_with_environment(monkeypatch):
+    monkeypatch.setenv("WEAVER_LIVE_PRICES", "0")
+
+    assert EntsoePriceProvider("real-token")._live_prices_enabled() is False
+
+
+def test_entso_acknowledgement_errors_are_extracted():
+    provider = EntsoePriceProvider("unused")
+    xml = """<?xml version="1.0" encoding="UTF-8"?>
+    <Acknowledgement_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-1:acknowledgementdocument:8:1">
+      <Reason>
+        <code>999</code>
+        <text>No matching data found</text>
+      </Reason>
+    </Acknowledgement_MarketDocument>"""
+
+    assert provider._extract_entso_error(xml) == "No matching data found"
+
+
 def test_price_window_uses_fallback_only_for_missing_future_windows():
     provider = EntsoePriceProvider("unused")
     household = SimpleNamespace(bidding_zone="10YFR-RTE------C")

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class EntsoePriceProvider:
     """Fetch ENTSO-E day-ahead prices, falling back only when live data is unavailable."""
-    BASE_URL = "https://data.transparency.entsoe.eu/api"
+    BASE_URL = "https://web-api.tp.entsoe.eu/api"
     CACHE_DIR = Path("data/price_cache")
     FALLBACK_BASELINES_EUR_KWH = {
         # Approximate recent day-ahead wholesale averages converted from EUR/MWh to EUR/kWh.
@@ -103,6 +103,15 @@ class EntsoePriceProvider:
         if value.tzinfo is None:
             return value
         return value.astimezone().replace(tzinfo=None)
+
+    def _has_api_key(self) -> bool:
+        return bool(self.api_key and self.api_key != "YOUR_TOKEN_HERE")
+
+    def _live_prices_enabled(self) -> bool:
+        live_prices = os.getenv("WEAVER_LIVE_PRICES")
+        if live_prices is not None:
+            return live_prices.lower() in {"1", "true", "yes"}
+        return self._has_api_key()
     
     def _save_prices_to_cache(self, target_date: date, bidding_zone: str, prices: List[EnergyPrice]) -> None:
         """Save prices to local cache"""
@@ -304,7 +313,7 @@ class EntsoePriceProvider:
             logger.debug("No bidding zone provided for ENTSO-E. Returning empty list.")
             return []
 
-        if os.getenv("WEAVER_LIVE_PRICES", "0").lower() not in {"1", "true", "yes"}:
+        if not self._live_prices_enabled():
             logger.info("Using offline/demo fallback prices for %s/%s", bidding_zone, target_date)
             return self._get_fallback_prices(target_date, bidding_zone)
         
@@ -322,67 +331,29 @@ class EntsoePriceProvider:
         }
         
         try:
-            if not self.api_key or self.api_key == "YOUR_TOKEN_HERE":
+            if not self._has_api_key():
                 raise ProviderError("No ENTSO-E API Key provided.")
 
             import requests
-            import urllib.parse
-            
-            query_string = urllib.parse.urlencode(params)
-            target_url = f"{self.BASE_URL}/query?{query_string}"
-            
-            response = None
-            # Step 1: Direct Attempt
+
             try:
-                logger.debug("ENTSO-E direct fetch attempt")
-                response = requests.get(target_url, timeout=10, verify=False)
-                resp_text = response.text.strip().lower()
-                if response.status_code != 200 or resp_text.startswith("<!doctype") or "<html" in resp_text[:100]:
-                    logger.debug("ENTSO-E direct fetch failed or returned HTML")
-                    response = None
-                else:
-                    logger.debug("ENTSO-E direct fetch succeeded")
+                logger.debug("ENTSO-E live fetch attempt for %s/%s", bidding_zone, target_date)
+                response = requests.get(self.BASE_URL, params=params, timeout=20)
             except Exception as e:
                 logger.debug("ENTSO-E direct fetch failed: %s", e)
+                raise ProviderError(f"ENTSO-E request failed: {e}") from e
 
-            # Step 2: Proxy 1 (AllOrigins - with JSON unwrapping)
-            if response is None:
-                try:
-                    encoded_target = urllib.parse.quote(target_url, safe='')
-                    proxy_url = f"https://api.allorigins.win/get?url={encoded_target}"
-                    logger.debug("Trying ENTSO-E proxy 1")
-                    proxy_resp = requests.get(proxy_url, timeout=15, verify=False)
-                    if proxy_resp.status_code == 200:
-                        json_data = proxy_resp.json()
-                        content = json_data.get("contents", "").strip()
-                        if content and not content.lower().startswith("<!doctype") and "<html" not in content.lower()[:100]:
-                            # Create a dummy response object to fit the rest of the logic
-                            class DummyResponse:
-                                def __init__(self, text): 
-                                    self.text = text
-                                    self.status_code = 200
-                            response = DummyResponse(content)
-                            logger.debug("ENTSO-E proxy 1 succeeded")
-                except Exception as e:
-                    logger.debug("ENTSO-E proxy 1 failed: %s", e)
+            resp_text = response.text.strip()
+            if response.status_code != 200:
+                detail = self._extract_entso_error(resp_text) or response.reason
+                raise ProviderError(f"ENTSO-E returned HTTP {response.status_code}: {detail}")
+            if self._looks_like_html(resp_text):
+                raise ProviderError("ENTSO-E returned HTML instead of XML.")
+            entso_error = self._extract_entso_error(resp_text)
+            if entso_error:
+                raise ProviderError(f"ENTSO-E rejected the request: {entso_error}")
 
-            # Step 3: Proxy 2 (CorsProxy)
-            if response is None:
-                try:
-                    proxy_url = f"https://corsproxy.io/?{urllib.parse.quote(target_url)}"
-                    logger.debug("Trying ENTSO-E proxy 2")
-                    proxy_resp = requests.get(proxy_url, timeout=15, verify=False)
-                    resp_text = proxy_resp.text.strip().lower()
-                    if proxy_resp.status_code == 200 and not resp_text.startswith("<!doctype") and "<html" not in resp_text[:100]:
-                        response = proxy_resp
-                        logger.debug("ENTSO-E proxy 2 succeeded")
-                except Exception as e:
-                    logger.debug("ENTSO-E proxy 2 failed: %s", e)
-
-            if response is None or response.status_code != 200:
-                raise ProviderError("All ENTSO-E fetch routes failed.")
-
-            prices = self._parse_entso_response(response.text, target_date)
+            prices = self._parse_entso_response(resp_text, target_date)
             if not prices:
                 raise ProviderError("ENTSO-E returned no price points.")
 
@@ -395,6 +366,35 @@ class EntsoePriceProvider:
         except Exception as e:
             logger.warning("ENTSO-E fetch failed for %s: %s", bidding_zone, e)
             return self._get_fallback_prices(target_date, bidding_zone)
+
+    def _looks_like_html(self, text: str) -> bool:
+        lowered = text.strip().lower()
+        return lowered.startswith("<!doctype") or lowered.startswith("<html") or "<html" in lowered[:200]
+
+    def _extract_entso_error(self, xml_response: str) -> Optional[str]:
+        import xml.etree.ElementTree as ET
+
+        text = xml_response.strip()
+        if not text or self._looks_like_html(text):
+            return None
+
+        try:
+            root = ET.fromstring(text)
+        except ET.ParseError:
+            return None
+
+        if not root.tag.endswith("Acknowledgement_MarketDocument"):
+            return None
+
+        reason_texts = [
+            (reason.findtext("{*}text") or "").strip()
+            for reason in root.findall(".//{*}Reason")
+        ]
+        reason_texts = [reason for reason in reason_texts if reason]
+        if reason_texts:
+            return "; ".join(reason_texts)
+
+        return "Acknowledgement document returned without price data"
     
     def _parse_entso_response(self, xml_response: str, target_date: date) -> List[EnergyPrice]:
         """Parse ENTSO-E XML response into EnergyPrice objects"""

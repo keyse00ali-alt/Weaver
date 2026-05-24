@@ -35,12 +35,43 @@ if (-not $env:MATTER_SERVER_WS_URL) {
   $env:MATTER_SERVER_WS_URL = "ws://127.0.0.1:5580/ws"
 }
 $env:FRONTEND_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
-$env:WEAVER_LIVE_PRICES = "0"
+
+function Get-DotEnvValue {
+  param(
+    [string]$Path,
+    [string]$Name
+  )
+
+  if (-not (Test-Path $Path)) {
+    return $null
+  }
+
+  $line = Get-Content $Path | Where-Object { $_ -match "^\s*$Name\s*=" } | Select-Object -First 1
+  if (-not $line) {
+    return $null
+  }
+
+  return ($line -replace "^\s*$Name\s*=\s*", "").Trim().Trim('"').Trim("'")
+}
+
+$backendEnvFile = Join-Path $backend ".env"
+$hasEntsoeToken = $env:ENTSOE_API_KEY -or $env:ENTSOE_TOKEN -or (Get-DotEnvValue $backendEnvFile "ENTSOE_API_KEY") -or (Get-DotEnvValue $backendEnvFile "ENTSOE_TOKEN")
+if ($hasEntsoeToken) {
+  Write-Host "ENTSO-E token found. Weaver will attempt live day-ahead prices."
+} else {
+  Write-Host "No ENTSO-E token found. Weaver will use fallback price estimates."
+}
+
+$backendCommand = "Set-Location '$backend'; `$env:MATTER_SERVER_WS_URL='$env:MATTER_SERVER_WS_URL'; `$env:FRONTEND_ORIGINS='$env:FRONTEND_ORIGINS'"
+if ($env:WEAVER_LIVE_PRICES) {
+  $backendCommand = "$backendCommand; `$env:WEAVER_LIVE_PRICES='$env:WEAVER_LIVE_PRICES'"
+}
+$backendCommand = "$backendCommand; & '$python' -m uvicorn main:app --host 127.0.0.1 --port 8000"
 
 Start-Process powershell.exe -WindowStyle Normal -ArgumentList @(
   "-NoExit",
   "-Command",
-  "Set-Location '$backend'; `$env:MATTER_SERVER_WS_URL='$env:MATTER_SERVER_WS_URL'; `$env:FRONTEND_ORIGINS='$env:FRONTEND_ORIGINS'; `$env:WEAVER_LIVE_PRICES='$env:WEAVER_LIVE_PRICES'; & '$python' -m uvicorn main:app --host 127.0.0.1 --port 8000"
+  $backendCommand
 )
 
 Start-Sleep -Seconds 2
