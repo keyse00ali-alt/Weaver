@@ -38,7 +38,7 @@ class LocationService:
                 "GB": "10YGB----------A",
                 "IE": "10IEA-TRAN------M",
                 "FR": "10YFR-RTE------C",
-                "DE": "10YDE-RWENET---I",
+                "DE": "10Y1001A1001A82H",
                 "ES": "10YES-REE------0",
                 "IT": "10YIT-NORTH---N",
                 "BE": "10YBE----------2",

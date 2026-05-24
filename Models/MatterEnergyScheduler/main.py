@@ -726,25 +726,24 @@ async def schedule_multi_appliance(
 
 @app.get("/prices/current/{bidding_zone}")
 async def get_current_price(bidding_zone: str, lat: Optional[float] = None, lng: Optional[float] = None):
-    """Get the current energy price for a location (Checking DB first, then real API)"""
+    """Get the current energy price for a location, preferring live ENTSO-E data."""
     try:
         now = datetime.now()
-        # Check DB first (in case browser synced it earlier)
-        db_prices = db_service.get_latest_prices(bidding_zone, now.date())
-        current_p = next((p for p in db_prices if p.start_time <= now < (p.start_time + timedelta(hours=1))), None)
-        
-        if current_p and current_p.is_real:
-            return current_p
-            
-        # If not in DB, try real API
-        # Create a temporary household-like object to carry the bidding_zone
         from collections import namedtuple
         HH = namedtuple('HH', ['bidding_zone'])
         temp_hh = HH(bidding_zone=bidding_zone)
-        
+
         prices = await price_provider.get_day_ahead_prices(now.date(), household=temp_hh, lat=lat, lng=lng)
         if any(p.is_real for p in prices):
             db_service.save_energy_prices(bidding_zone, prices)
+            current_p = next((p for p in prices if p.start_time <= now < (p.start_time + timedelta(hours=1))), None)
+            return current_p or (prices[0] if prices else None)
+
+        db_prices = db_service.get_latest_prices(bidding_zone, now.date())
+        current_p = next((p for p in db_prices if p.start_time <= now < (p.start_time + timedelta(hours=1))), None)
+        if current_p:
+            return current_p
+
         current_p = next((p for p in prices if p.start_time <= now < (p.start_time + timedelta(hours=1))), None)
         return current_p or (prices[0] if prices else None)
     except Exception as e:

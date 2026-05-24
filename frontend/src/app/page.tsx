@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 const EUROPE_BOUNDS = { lat: [34, 72], lng: [-25, 45] };
 const ZONE_NAMES: Record<string, string> = {
+  "10Y1001A1001A82H": "Germany",
   "10YDE-RWENET---I": "Germany",
   "10YFR-RTE------C": "France",
   "10YGB----------A": "United Kingdom",
@@ -77,6 +78,10 @@ const getErrorMessage = (error: unknown) => error instanceof Error ? error.messa
 const getApplianceSchedules = (jobs: ScheduleJob[], devices: Appliance[]) => {
   const applianceIds = new Set(devices.map((device) => String(device.id)));
   return jobs.filter((job) => applianceIds.has(String(job.appliance_id)));
+};
+const formatEnergyPrice = (price: number) => {
+  if (Math.abs(price) < 0.0005) return "0.000";
+  return price.toFixed(3);
 };
 const CITY_STORAGE_KEY = "weaver.selectedCity";
 const VIRTUAL_TEST_CODE = "WEAVER-TEST-LOAD";
@@ -253,53 +258,11 @@ export default function Home() {
         setLocationError(null);
         setIsSearchingLocation(false); // Close immediately for snappiness
 
-        // NUCLEAR OPTION: Browser-First Price Engine
-        // Your backend is network-restricted, so we use your browser as a 'scout'
         let priceData: CurrentPrice | null = null;
-        console.log("Browser scout: Attempting to fetch live prices...");
-        
         try {
-          // Route 1: Direct browser fetch (Open-Meteo is CORS-friendly!)
-          const targetUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=electricity_price&timezone=auto`;
-          console.log("Browser scout: Attempting direct fetch from", targetUrl);
-          
-          const priceRes = await fetch(targetUrl);
-          if (priceRes.ok) {
-            const priceJson = await priceRes.json();
-            if (priceJson.hourly && priceJson.hourly.electricity_price) {
-              const times = priceJson.hourly.time;
-              const prices = priceJson.hourly.electricity_price;
-              
-              const fullPrices = times.map((t: string, i: number) => ({
-                start_time: t,
-                price_per_kwh: (prices[i] || 0) / 1000.0,
-                is_real: true
-              }));
-
-              const nowIdx = new Date().getHours();
-              priceData = {
-                price_per_kwh: prices[nowIdx] / 1000.0,
-                start_time: new Date().toISOString(),
-                is_real: true
-              };
-
-              // SYNC TO BACKEND: Tell the backend what we found!
-              await weaverApi.syncPrices(res.bidding_zone, fullPrices);
-              console.log("Browser scout: Success! Backend synchronized.");
-              toast.success("Price data synchronized!", { icon: <Signal size={16} /> });
-            }
-          }
+          priceData = await weaverApi.getCurrentPrice(res.bidding_zone, lat, lng) as CurrentPrice | null;
         } catch (e) {
-          console.warn("Browser scout failed, checking backend cache...", e);
-        }
-
-        // If browser failed, check if backend has any cached/synced data
-        if (!priceData) {
-          try {
-            priceData = await weaverApi.getCurrentPrice(res.bidding_zone, lat, lng) as CurrentPrice | null;
-          } catch {
-            // Backend cache miss is acceptable; the UI can still continue.
-          }
+          console.warn("Backend price lookup failed.", e);
         }
 
         setCurrentPrice(priceData);
@@ -674,7 +637,7 @@ export default function Home() {
                   </span>
                 </div>
                 <p className="text-2xl font-bold tabular-nums">
-                  {currentPrice.price_per_kwh.toFixed(2)}<span className="text-xs ml-1 opacity-60">EUR/kWh</span>
+                  {formatEnergyPrice(currentPrice.price_per_kwh)}<span className="text-xs ml-1 opacity-60">EUR/kWh</span>
                 </p>
                 <p className="text-[9px] text-slate-400 uppercase font-bold mt-1">
                   {currentPrice.is_real ? "From" : "Estimated for"} {cityDisplay || "selected city"}
@@ -723,7 +686,7 @@ export default function Home() {
               </p>
               {currentPrice && (
                 <p className="mt-3 text-xs font-bold text-primary">
-                  {priceSourceLabel}: {currentPrice.price_per_kwh.toFixed(3)} EUR/kWh
+                  {priceSourceLabel}: {formatEnergyPrice(currentPrice.price_per_kwh)} EUR/kWh
                 </p>
               )}
             </button>

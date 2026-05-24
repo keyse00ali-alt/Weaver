@@ -9,7 +9,7 @@ BIDDING_ZONES = {
     "CH": "10YCH-SWISSGRIDZ",  # Switzerland
     "CY": "10YCY-1001A0003J",  # Cyprus
     "CZ": "10YCZ-CEPS-----N",  # Czech Republic
-    "DE_LU": "10YDOM-1001A082P",  # Germany, Luxembourg
+    "DE_LU": "10Y1001A1001A82H",  # Germany, Luxembourg
     "DK_1": "10YDK-1-------W",  # Denmark DK1
     "DK_2": "10YDK-2-------M",  # Denmark DK2
     "EE": "10Y1001A1001A391",  # Estonia
@@ -52,5 +52,5 @@ BIDDING_ZONES = {
     "UK_GB": "10YGB----------A", # UK Great Britain
     "UK_NI": "10Y1001A1001A016", # UK Northern Ireland
     "GB": "10YGB----------A",    # Alias for UK
-    "DE": "10YDOM-1001A082P",    # Alias for Germany
+    "DE": "10Y1001A1001A82H",    # Alias for Germany
 }

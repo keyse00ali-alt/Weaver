@@ -7,6 +7,7 @@ import { weaverApi } from "@/lib/api";
 
 const CITY_STORAGE_KEY = "weaver.selectedCity";
 const ZONE_NAMES: Record<string, string> = {
+  "10Y1001A1001A82H": "Germany",
   "10YDE-RWENET---I": "Germany",
   "10YFR-RTE------C": "France",
   "10YGB----------A": "United Kingdom",

@@ -24,8 +24,9 @@ class EntsoePriceProvider:
         "10YCH-SWISSGRIDZ": 0.095,  # Switzerland
         "10YCY-1001A0003J": 0.130,  # Cyprus
         "10YCZ-CEPS-----N": 0.095,  # Czech Republic
-        "10YDOM-1001A082P": 0.090,  # Germany/Luxembourg
-        "10YDE-RWENET---I": 0.090,  # Germany alias used by location lookup
+        "10Y1001A1001A82H": 0.090,  # Germany/Luxembourg
+        "10YDOM-1001A082P": 0.090,  # Germany/Luxembourg legacy alias
+        "10YDE-RWENET---I": 0.090,  # Germany legacy alias
         "10Y1001A1001A83F": 0.090,  # Germany/Luxembourg legacy alias
         "10YDK-1-------W": 0.075,  # Denmark DK1
         "10YDK-2-------M": 0.085,  # Denmark DK2
