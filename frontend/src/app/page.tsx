@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Layers, Plus, Signal, RefreshCcw, MapPin, AlertCircle, Clock, Search, Zap, X, Sun, Info, Unplug } from "lucide-react";
+import { CalendarX, Layers, Plus, Signal, RefreshCcw, MapPin, AlertCircle, Clock, Search, Zap, X, Sun, Info, Unplug } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { weaverApi } from "@/lib/api";
 import { Scanner } from "@/components/Scanner";
@@ -129,6 +129,7 @@ export default function Home() {
   const [virtualRunningIds, setVirtualRunningIds] = useState<Set<string>>(new Set());
   const [startingIds, setStartingIds] = useState<Set<string>>(new Set());
   const [schedulingIds, setSchedulingIds] = useState<Set<string>>(new Set());
+  const [cancellingScheduleIds, setCancellingScheduleIds] = useState<Set<string>>(new Set());
 
   // Debug schedules
   useEffect(() => {
@@ -312,6 +313,30 @@ export default function Home() {
       return;
     }
     toast.info("Choose a city to enable price scheduling.");
+  };
+
+  const handleCancelSchedule = async (schedule: ScheduleJob) => {
+    const jobId = schedule.job_id;
+    if (!jobId) {
+      toast.error("Could not find the scheduled job.");
+      return;
+    }
+
+    setCancellingScheduleIds(prev => new Set(prev).add(jobId));
+    try {
+      await weaverApi.deleteSchedule(jobId);
+      setSchedules(prev => prev.filter(item => item.job_id !== jobId));
+      toast.success("Schedule cancelled");
+      await fetchData();
+    } catch (error) {
+      toast.error(`Could not cancel schedule: ${getErrorMessage(error)}`);
+    } finally {
+      setCancellingScheduleIds(prev => {
+        const next = new Set(prev);
+        next.delete(jobId);
+        return next;
+      });
+    }
   };
 
   const handleSolarModeToggle = async () => {
@@ -768,7 +793,9 @@ export default function Home() {
               const isVirtual = isVirtualAppliance(app);
               const isRunning = isApplianceRunning(app);
               const scheduleTime = getScheduleTime(app.id);
-              const hasSchedule = Boolean(getSchedule(app.id));
+              const schedule = getSchedule(app.id);
+              const hasSchedule = Boolean(schedule);
+              const isCancellingSchedule = schedule?.job_id ? cancellingScheduleIds.has(schedule.job_id) : false;
               const statusLabel = isRunning ? "Running" : hasSchedule ? "Scheduled" : "Ready";
               const statusText = isRunning
                 ? "Appliance reports active through Matter."
@@ -819,6 +846,19 @@ export default function Home() {
                       <p className="mt-1 text-xs font-semibold text-primary">Turns on at {scheduleTime}</p>
                     )}
                   </div>
+
+                  {schedule && !isRunning && (
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => handleCancelSchedule(schedule)}
+                        disabled={isCancellingSchedule}
+                        className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 transition-colors hover:text-red-600 disabled:opacity-60"
+                      >
+                        <CalendarX size={13} />
+                        {isCancellingSchedule ? "Cancelling" : "Cancel schedule"}
+                      </button>
+                    </div>
+                  )}
                 </motion.article>
               );
             })}
