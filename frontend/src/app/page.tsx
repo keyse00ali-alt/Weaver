@@ -243,6 +243,7 @@ export default function Home() {
   const cityDisplay = selectedCity || (hasCitySet ? ZONE_NAMES[biddingZone || ""] || "Selected city" : null);
   const priceSourceLabel = currentPrice?.is_real ? "Live price" : "Estimated fallback price";
   const isVirtualAppliance = (app: Appliance) => app.device_type === "virtual_load" || app.matter_device_id.startsWith("virtual_");
+  const getApplianceDisplayName = (app: Appliance) => isVirtualAppliance(app) ? "Dishwasher" : app.name;
   const isApplianceRunning = (app: Appliance) => runningIds.has(app.id) || virtualRunningIds.has(app.id);
 
   async function fetchData() {
@@ -456,7 +457,7 @@ export default function Home() {
     const app = appliances.find(a => a.id === applianceId);
     if (app && isVirtualAppliance(app)) {
       setVirtualRunningIds(prev => new Set(prev).add(applianceId));
-      toast.success(`${app.name} started for UI testing`, {
+      toast.success(`${getApplianceDisplayName(app)} started for UI testing`, {
         icon: <Zap size={16} />,
         style: { borderRadius: '16px', background: '#187b8f', color: '#fff', fontWeight: 'bold' },
       });
@@ -474,7 +475,7 @@ export default function Home() {
     try {
       await weaverApi.runApplianceNow(applianceId);
       setRunningIds(prev => new Set(prev).add(applianceId));
-      toast.success(`${app?.name || "Device"} started!`, {
+      toast.success(`${app ? getApplianceDisplayName(app) : "Device"} started!`, {
         icon: <Zap size={16} />,
         style: { borderRadius: '16px', background: '#187b8f', color: '#fff', fontWeight: 'bold' },
       });
@@ -566,14 +567,14 @@ export default function Home() {
       if (setupCode.toUpperCase() === VIRTUAL_TEST_CODE) {
         const existingVirtual = appliances.find(isVirtualAppliance);
         if (existingVirtual) {
-          toast.success(`${existingVirtual.name} is already connected`);
+          toast.success(`${getApplianceDisplayName(existingVirtual)} is already connected`);
           setIsScanning(false);
           await fetchData();
           return;
         }
 
         await weaverApi.registerAppliance({
-          name: "Virtual test load",
+          name: "Dishwasher",
           matter_device_id: "virtual_test_load",
           matter_device_ip: "127.0.0.1",
           matter_device_port: 1,
@@ -583,7 +584,7 @@ export default function Home() {
           duration_seconds: 45 * 60,
           deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         });
-        toast.success("Virtual test load added for scheduling");
+        toast.success("Dishwasher added for scheduling");
         await fetchData();
         setIsScanning(false);
         return;
@@ -907,9 +908,9 @@ export default function Home() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-bold text-slate-400 tabular-nums">#{index + 1}</span>
-                          <h3 className="font-bold text-slate-950 truncate">{app.name}</h3>
+                          <h3 className="font-bold text-slate-950 truncate">{getApplianceDisplayName(app)}</h3>
                         </div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{isVirtual ? "Virtual scheduling test" : `Matter node ${app.matter_node_id ?? "unknown"}`}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{isVirtual ? "Demo appliance" : `Matter node ${app.matter_node_id ?? "unknown"}`}</p>
                       </div>
                     </div>
                     <span className={cn(
@@ -980,8 +981,8 @@ export default function Home() {
                         {isRunning ? <Zap size={18} fill="currentColor" /> : <Layers size={18} />}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-bold text-slate-950 truncate">{app.name}</h3>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{isVirtual ? "Virtual" : `Node ${app.matter_node_id ?? "unknown"}`} | {status}</p>
+                        <h3 className="font-bold text-slate-950 truncate">{getApplianceDisplayName(app)}</h3>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{isVirtual ? "Demo" : `Node ${app.matter_node_id ?? "unknown"}`} | {status}</p>
                         {scheduleTime && (
                           <p className="mt-1 text-xs font-semibold text-primary">Turns on at {scheduleTime}</p>
                         )}
