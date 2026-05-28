@@ -44,8 +44,6 @@ start-matter-server.ps1            Advanced helper; native Windows Matter Server
 start-weaver.ps1                   Windows local startup script for Weaver UI/backend
 stop-weaver.ps1                    Windows local stop script
 uninstall.ps1                      Removes installed local dependencies
-Start Weaver.vbs                   Double-click local launcher
-Stop Weaver.vbs                    Double-click local stop helper
 ```
 
 ## Requirements
@@ -152,8 +150,6 @@ To stop Weaver, close the Weaver PowerShell windows or run:
 ```powershell
 .\stop-weaver.ps1
 ```
-
-You can also start Weaver from File Explorer by opening the repo folder and opening `Start Weaver.vbs`. To stop Weaver from File Explorer, open `Stop Weaver.vbs`.
 
 ## Uninstall
 
